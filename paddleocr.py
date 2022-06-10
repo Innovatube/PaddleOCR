@@ -30,7 +30,6 @@ from pathlib import Path
 
 tools = importlib.import_module('.', 'tools')
 ppocr = importlib.import_module('.', 'ppocr')
-ppstructure = importlib.import_module('.', 'ppstructure')
 
 from tools.infer import predict_system
 from ppocr.utils.logging import get_logger
