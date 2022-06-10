@@ -15,6 +15,7 @@
 import os
 import sys
 import importlib
+import ast
 
 __dir__ = os.path.dirname(__file__)
 
@@ -37,13 +38,11 @@ from ppocr.utils.logging import get_logger
 logger = get_logger()
 from ppocr.utils.utility import check_and_read_gif, get_image_file_list
 from ppocr.utils.network import maybe_download, download_with_progressbar, is_link, confirm_model_dir_url
-from tools.infer.utility import draw_ocr, str2bool, check_gpu
-from ppstructure.utility import init_args, draw_structure_result
-from ppstructure.predict_system import StructureSystem, save_structure_res
+from tools.infer.utility import str2bool, check_gpu, init_args as infer_args
+
 
 __all__ = [
-    'PaddleOCR', 'PPStructure', 'draw_ocr', 'draw_structure_result',
-    'save_structure_res', 'download_with_progressbar'
+    'PaddleOCR'
 ]
 
 SUPPORT_DET_MODEL = ['DB']
@@ -275,6 +274,51 @@ MODEL_URLS = {
     }
 }
 
+# move from ppstructure/utility.py
+def init_args():
+    parser = infer_args()
+
+    # params for output
+    parser.add_argument("--output", type=str, default='./output')
+    # params for table structure
+    parser.add_argument("--table_max_len", type=int, default=488)
+    parser.add_argument("--table_model_dir", type=str)
+    parser.add_argument(
+        "--table_char_dict_path",
+        type=str,
+        default="./ppocr/utils/dict/table_structure_dict.txt")
+    # params for layout
+    parser.add_argument(
+        "--layout_path_model",
+        type=str,
+        default="lp://PubLayNet/ppyolov2_r50vd_dcn_365e_publaynet/config")
+    parser.add_argument(
+        "--layout_label_map",
+        type=ast.literal_eval,
+        default=None,
+        help='label map according to ppstructure/layout/README_ch.md')
+    # params for inference
+    parser.add_argument(
+        "--mode",
+        type=str,
+        default='structure',
+        help='structure and vqa is supported')
+    parser.add_argument(
+        "--layout",
+        type=str2bool,
+        default=True,
+        help='Whether to enable layout analysis')
+    parser.add_argument(
+        "--table",
+        type=str2bool,
+        default=True,
+        help='In the forward, whether the table area uses table recognition')
+    parser.add_argument(
+        "--ocr",
+        type=str2bool,
+        default=True,
+        help='In the forward, whether the non-table area is recognition by ocr')
+    return parser
 
 def parse_args(mMain=True):
     import argparse
@@ -493,108 +537,3 @@ class PaddleOCR(predict_system.TextSystem):
                     return cls_res
             rec_res, elapse = self.text_recognizer(img)
             return rec_res
-
-
-class PPStructure(StructureSystem):
-    def __init__(self, **kwargs):
-        params = parse_args(mMain=False)
-        params.__dict__.update(**kwargs)
-        assert params.structure_version in SUPPORT_STRUCTURE_MODEL_VERSION, "structure_version must in {}, but get {}".format(
-            SUPPORT_STRUCTURE_MODEL_VERSION, params.structure_version)
-        params.use_gpu = check_gpu(params.use_gpu)
-
-        if not params.show_log:
-            logger.setLevel(logging.INFO)
-        lang, det_lang = parse_lang(params.lang)
-
-        # init model dir
-        det_model_config = get_model_config('OCR', params.ocr_version, 'det',
-                                            det_lang)
-        params.det_model_dir, det_url = confirm_model_dir_url(
-            params.det_model_dir,
-            os.path.join(BASE_DIR, 'whl', 'det', det_lang),
-            det_model_config['url'])
-        rec_model_config = get_model_config('OCR', params.ocr_version, 'rec',
-                                            lang)
-        params.rec_model_dir, rec_url = confirm_model_dir_url(
-            params.rec_model_dir,
-            os.path.join(BASE_DIR, 'whl', 'rec', lang), rec_model_config['url'])
-        table_model_config = get_model_config(
-            'STRUCTURE', params.structure_version, 'table', 'en')
-        params.table_model_dir, table_url = confirm_model_dir_url(
-            params.table_model_dir,
-            os.path.join(BASE_DIR, 'whl', 'table'), table_model_config['url'])
-        # download model
-        maybe_download(params.det_model_dir, det_url)
-        maybe_download(params.rec_model_dir, rec_url)
-        maybe_download(params.table_model_dir, table_url)
-
-        if params.rec_char_dict_path is None:
-            params.rec_char_dict_path = str(
-                Path(__file__).parent / rec_model_config['dict_path'])
-        if params.table_char_dict_path is None:
-            params.table_char_dict_path = str(
-                Path(__file__).parent / table_model_config['dict_path'])
-
-        logger.debug(params)
-        super().__init__(params)
-
-    def __call__(self, img, return_ocr_result_in_table=False):
-        if isinstance(img, str):
-            # download net image
-            if img.startswith('http'):
-                download_with_progressbar(img, 'tmp.jpg')
-                img = 'tmp.jpg'
-            image_file = img
-            img, flag = check_and_read_gif(image_file)
-            if not flag:
-                with open(image_file, 'rb') as f:
-                    np_arr = np.frombuffer(f.read(), dtype=np.uint8)
-                    img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-            if img is None:
-                logger.error("error in loading image:{}".format(image_file))
-                return None
-        if isinstance(img, np.ndarray) and len(img.shape) == 2:
-            img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-
-        res = super().__call__(img, return_ocr_result_in_table)
-        return res
-
-
-def main():
-    # for cmd
-    args = parse_args(mMain=True)
-    image_dir = args.image_dir
-    if is_link(image_dir):
-        download_with_progressbar(image_dir, 'tmp.jpg')
-        image_file_list = ['tmp.jpg']
-    else:
-        image_file_list = get_image_file_list(args.image_dir)
-    if len(image_file_list) == 0:
-        logger.error('no images find in {}'.format(args.image_dir))
-        return
-    if args.type == 'ocr':
-        engine = PaddleOCR(**(args.__dict__))
-    elif args.type == 'structure':
-        engine = PPStructure(**(args.__dict__))
-    else:
-        raise NotImplementedError
-
-    for img_path in image_file_list:
-        img_name = os.path.basename(img_path).split('.')[0]
-        logger.info('{}{}{}'.format('*' * 10, img_path, '*' * 10))
-        if args.type == 'ocr':
-            result = engine.ocr(img_path,
-                                det=args.det,
-                                rec=args.rec,
-                                cls=args.use_angle_cls)
-            if result is not None:
-                for line in result:
-                    logger.info(line)
-        elif args.type == 'structure':
-            result = engine(img_path)
-            save_structure_res(result, args.output, img_name)
-
-            for item in result:
-                item.pop('img')
-                logger.info(item)
