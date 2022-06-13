@@ -19,14 +19,18 @@ import ast
 
 __dir__ = os.path.dirname(__file__)
 
-import paddle
 
 sys.path.append(os.path.join(__dir__, ''))
+
+import paddle
 
 import cv2
 import logging
 import numpy as np
 from pathlib import Path
+
+logger = logging.getLogger('paddle')
+logger.setLevel(logging.WARNING)
 
 tools = importlib.import_module('.', 'tools')
 ppocr = importlib.import_module('.', 'ppocr')
