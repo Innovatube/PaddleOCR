@@ -58,7 +58,6 @@ from ..fluid.param_attr import WeightNormParamAttr  # noqa: F401
 from ..fluid.optimizer import ExponentialMovingAverage  # noqa: F401
 from ..fluid.io import save  # noqa: F401
 from ..fluid.io import load  # noqa: F401
-from ..fluid.io import load_program_state  # noqa: F401
 from ..fluid.io import set_program_state  # noqa: F401
 
 from ..fluid.io import load_vars  # noqa: F401
@@ -104,7 +103,6 @@ __all__ = [     #noqa
            'deserialize_persistables',
            'load_from_file',
            'normalize_program',
-           'load_program_state',
            'set_program_state',
            'cpu_places',
            'cuda_places',
