@@ -88,7 +88,7 @@ from . import install_check
 from .dygraph.nn import *
 from .dygraph.layers import *
 from .dygraph.base import enable_dygraph, disable_dygraph
-from .io import save, load, set_program_state
+from .io import save, set_program_state
 from .dygraph.checkpoint import save_dygraph, load_dygraph
 from .dygraph.varbase_patch_methods import monkey_patch_varbase
 from . import generator
@@ -142,7 +142,6 @@ __all__ = framework.__all__ + executor.__all__ + \
         'Scope',
         'install_check',
         'save',
-        'load',
         '_cuda_synchronize'
     ]
 

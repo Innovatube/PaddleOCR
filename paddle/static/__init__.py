@@ -57,7 +57,6 @@ from ..fluid.parallel_executor import ParallelExecutor  # noqa: F401
 from ..fluid.param_attr import WeightNormParamAttr  # noqa: F401
 from ..fluid.optimizer import ExponentialMovingAverage  # noqa: F401
 from ..fluid.io import save  # noqa: F401
-from ..fluid.io import load  # noqa: F401
 from ..fluid.io import set_program_state  # noqa: F401
 
 from ..fluid.io import load_vars  # noqa: F401
@@ -93,7 +92,6 @@ __all__ = [     #noqa
            'data',
            'InputSpec',
            'save',
-           'load',
            'save_inference_model',
            'load_inference_model',
            'serialize_program',
