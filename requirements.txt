@@ -6,8 +6,7 @@ lmdb
 tqdm
 numpy
 python-Levenshtein
-opencv-contrib-python==4.4.0.46
-cython
+opencv-contrib-python==4.5.4.60
 lxml
 premailer
 openpyxl
