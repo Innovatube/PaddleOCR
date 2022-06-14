@@ -7,5 +7,6 @@ recursive-include ppocr/postprocess *.py
 recursive-include tools/infer *.py
 recursive-include tools __init__.py
 recursive-include ppocr/utils/e2e_utils *.py
+recursive-include ppstructure *.py
 
 recursive-include paddle *
